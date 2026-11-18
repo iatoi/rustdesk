@@ -2518,7 +2518,27 @@ pub fn rustdesk_interval(i: Interval) -> ThrottledInterval {
     ThrottledInterval::new(i)
 }
 
+// Iatoi rc 2026-11-18: application name of this fork. Every per-application
+// name on Windows is derived from `config::APP_NAME` (config and log
+// directories, IPC pipes, service name, registry keys, URL scheme, install
+// directory, shortcuts, firewall rule, `<name>.exe`), so a name other than
+// "RustDesk" is what lets this fork be installed next to upstream RustDesk.
+// It must pass `platform::validate_install_app_name` (ASCII letters, digits,
+// '-' and '_' only, no space), and the shipped executable must be named
+// `<name>.exe`.
+pub const IATOI_RC_APP_NAME: &str = "iatoi-rc";
+
 pub fn load_custom_client() {
+    // Iatoi rc 2026-11-18: rename at the point where upstream applies the
+    // `app-name` of a custom client, i.e. before anything reads APP_NAME.
+    // Only the stock name is replaced, so a second call (Flutter `initialize`)
+    // never rewrites the name while other threads are reading it.
+    {
+        let mut app_name = config::APP_NAME.write().unwrap();
+        if *app_name == "RustDesk" {
+            *app_name = IATOI_RC_APP_NAME.to_owned();
+        }
+    }
     #[cfg(debug_assertions)]
     if let Ok(data) = std::fs::read_to_string("./custom.txt") {
         read_custom_client(data.trim());
