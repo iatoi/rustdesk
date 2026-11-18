@@ -29,5 +29,23 @@ RustDesk authors. Build target: Windows x64 only.
      upstream releases is refused.
    - Setting the constant to `false` restores the upstream behaviour.
 
+3. Application renamed to `iatoi-rc` so it installs next to upstream RustDesk
+   - `src/common.rs`: new constant `IATOI_RC_APP_NAME` (`iatoi-rc`);
+     `load_custom_client()` replaces the stock application name with it
+     before anything else runs. Upstream derives from that name the config
+     and log directories, IPC pipe names, Windows service name, registry
+     keys, URL scheme, install directory, shortcuts and firewall rule.
+   - `.github/workflows/flutter-build.yml`: the built executable is renamed
+     to `iatoi-rc.exe`; the packer and `res/msi/preprocess.py` are pointed at
+     it (`--app-name iatoi-rc`); the two release files are named
+     `iatoi-rc-<version>-<arch>.exe` and `.msi`.
+   - `flutter/windows/runner/Runner.rc`: `FileDescription`, `ProductName`,
+     `InternalName` and `OriginalFilename` name Iatoi rc. `CompanyName` and
+     `LegalCopyright` are unchanged.
+   - Not renamed, still shared with an upstream RustDesk on the same machine:
+     the privacy-mode helper `RuntimeBroker_rustdesk.exe` and
+     `WindowInjection.dll`, the virtual display driver, the printer driver,
+     `librustdesk.dll`, the LAN discovery port.
+
 No other source file, license file, or copyright notice was changed in this
 revision. The submodule `libs/hbb_common` is untouched.
