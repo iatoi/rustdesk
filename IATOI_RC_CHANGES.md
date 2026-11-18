@@ -1,0 +1,33 @@
+# Iatoi rc: changes relative to RustDesk 1.5.3
+
+Iatoi rc is a modified version of RustDesk 1.5.3 (tag `1.5.3`), distributed
+under the same license, GNU AGPL-3.0 (see `LICENCE`). The original copyright
+notices of the RustDesk authors and contributors are kept unchanged. This
+file lists the modifications, as the license requires.
+
+Iatoi rc is not RustDesk and is not affiliated with or endorsed by the
+RustDesk authors. Build target: Windows x64 only.
+
+## Modifications (2026-11-18)
+
+1. `.github/workflows/flutter-build.yml`
+   - Reduced to the jobs needed for the Windows x86_64 Flutter build and its
+     release upload (`.exe` and `.msi`).
+   - Removed the Windows Sciter (x86) job, the Windows arm64 matrix entries,
+     and the iOS, macOS, Android, Linux (all variants), AppImage, Flatpak and
+     web jobs.
+   - Removed the jobs that only publish metadata or archives for the removed
+     platforms (`publish-signed-update-metadata`, `publish_unsigned`).
+   - The build steps of the Windows x86_64 Flutter job are unchanged.
+
+2. Software update check disabled (no connection to RustDesk update services)
+   - `src/common.rs`: new constant `IATOI_RC_NO_UPSTREAM_UPDATE`;
+     `check_software_update()` and `do_check_software_update()` return early.
+   - `src/updater.rs`: the auto-update scheduler, `check_update()` and the
+     macOS `check_update_as_root()` return early.
+   - `src/updater/artifact.rs`: fetching signed update metadata from
+     upstream releases is refused.
+   - Setting the constant to `false` restores the upstream behaviour.
+
+No other source file, license file, or copyright notice was changed in this
+revision. The submodule `libs/hbb_common` is untouched.

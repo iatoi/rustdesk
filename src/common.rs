@@ -1057,7 +1057,14 @@ pub fn is_modifier(evt: &KeyEvent) -> bool {
     }
 }
 
+// Iatoi rc 2026-11-18: master switch; true = this fork never contacts upstream RustDesk update servers.
+pub(crate) const IATOI_RC_NO_UPSTREAM_UPDATE: bool = true;
+
 pub fn check_software_update() {
+    // Iatoi rc 2026-11-18: no update check against upstream RustDesk (GUI entry point).
+    if IATOI_RC_NO_UPSTREAM_UPDATE {
+        return;
+    }
     if is_custom_client() {
         return;
     }
@@ -1177,6 +1184,11 @@ fn process_software_update_check_response(bytes: Bytes) -> ResultType<()> {
 // Because the url is always `https://api.rustdesk.com/version/latest`.
 #[tokio::main(flavor = "current_thread")]
 pub async fn do_check_software_update() -> hbb_common::ResultType<()> {
+    // Iatoi rc 2026-11-18: never call the upstream version API; stay in the "no update" state.
+    if IATOI_RC_NO_UPSTREAM_UPDATE {
+        clear_software_update_url();
+        return Ok(());
+    }
     let (request, url) =
         hbb_common::version_check_request(hbb_common::VER_TYPE_RUSTDESK_CLIENT.to_string());
     let proxy_conf = Config::get_socks();

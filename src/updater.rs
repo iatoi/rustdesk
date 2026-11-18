@@ -153,6 +153,10 @@ fn start_auto_update_check() -> Sender<UpdateMsg> {
 }
 
 fn start_auto_update_check_(rx_msg: Receiver<UpdateMsg>) {
+    // Iatoi rc 2026-11-18: the auto-update scheduler never runs in this fork.
+    if crate::common::IATOI_RC_NO_UPSTREAM_UPDATE {
+        return;
+    }
     std::thread::sleep(INITIAL_CHECK_DELAY);
     if let Err(e) = check_update(false) {
         log::error!("Error checking for updates: {}", e);
@@ -187,6 +191,10 @@ fn start_auto_update_check_(rx_msg: Receiver<UpdateMsg>) {
 }
 
 fn check_update(manually: bool) -> ResultType<()> {
+    // Iatoi rc 2026-11-18: no update check or download from upstream RustDesk, even when manual.
+    if crate::common::IATOI_RC_NO_UPSTREAM_UPDATE {
+        return Ok(());
+    }
     // On macOS, auto-update is handled by check_update_as_root() in the service process.
     // The shared check_update() path is only used for manual update checks from the GUI.
     #[cfg(target_os = "macos")]
@@ -513,6 +521,10 @@ pub fn start_auto_update_macos() {
 
 #[cfg(target_os = "macos")]
 pub fn check_update_as_root() -> ResultType<bool> {
+    // Iatoi rc 2026-11-18: no root auto-update from upstream RustDesk (macOS service path).
+    if crate::common::IATOI_RC_NO_UPSTREAM_UPDATE {
+        return Ok(false);
+    }
     let _update_lock = acquire_mac_update_lock()?;
     // Allow-auto-update setting
     if !config::Config::get_bool_option(keys::OPTION_ALLOW_AUTO_UPDATE) {
