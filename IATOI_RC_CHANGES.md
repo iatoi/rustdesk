@@ -75,3 +75,6 @@ RustDesk authors. Build targets: Windows x64 and macOS arm64.
 
 No other source file, license file, or copyright notice was changed in this
 revision. The submodule `libs/hbb_common` is untouched.
+
+## lock-on-privacy-exit (2026-11-19)
+`src/privacy_mode/win_input.rs`: khi người tại máy bấm **Ctrl+P** để thoát Privacy Mode (Mode 1 Blackout), nếu `Config::get_option("lock-on-privacy-exit") == "Y"` thì gọi `crate::platform::lock_screen()` (LockWorkStation) ngay sau `turn_off_privacy` → máy về màn hình Lock Windows, muốn vào phải có mật khẩu. Đóng lỗ hổng "Ctrl+P lộ desktop" của Privacy Mode gốc. Cờ opt-in, mặc định tắt. Script `day-iatoi-rc-qua-ssh.py` đặt `'Y'` cho chế độ `may-rieng`, `'N'` cho `nguoi-dung`.

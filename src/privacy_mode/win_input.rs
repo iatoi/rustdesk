@@ -229,6 +229,12 @@ pub extern "system" fn privacy_mode_hook_keyboard(
                         ) {
                             log::error!("Failed to off_privacy {}", e);
                         }
+                        // iatoi-rc: nguoi tai may thoat Privacy Mode bang Ctrl+P se chi thay
+                        // desktop. Neu bat lock-on-privacy-exit='Y' thi khoa may luon (ve man
+                        // hinh Lock Windows, muon vao phai co mat khau) -> dong lo hong Ctrl+P.
+                        if hbb_common::config::Config::get_option("lock-on-privacy-exit") == "Y" {
+                            crate::platform::lock_screen();
+                        }
                     }
                 }
                 WM_KEYUP => {
