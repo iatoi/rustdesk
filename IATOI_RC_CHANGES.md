@@ -25,6 +25,15 @@ RustDesk authors. Build targets: Windows x64 and macOS arm64.
      Apple Silicon (`aarch64-apple-darwin`), shipping `Iatoi-rc.app` inside
      `iatoi-rc-<version>-aarch64.dmg`.
 
+5. Brand icon replacement for Iatoi rc
+   - Replaced upstream RustDesk icons (`flutter/assets/icon.svg`,
+     `res/logo.svg`, `res/icon.png`, `res/mac-icon.png`, `res/icon.ico`,
+     `res/tray-icon.ico`, `res/mac-tray-light-x2.png`,
+     `res/mac-tray-dark-x2.png`,
+     `flutter/windows/runner/resources/app_icon.ico`,
+     `flutter/macos/Runner/AppIcon.icns`) with the Iatoi monogram icon so
+     Iatoi rc is visually distinct from upstream RustDesk.
+
 ## Modifications (2026-11-18)
 
 1. `.github/workflows/flutter-build.yml`
