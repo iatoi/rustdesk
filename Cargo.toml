@@ -218,7 +218,7 @@ android-wakelock = { git = "https://github.com/rustdesk-org/android-wakelock" }
 
 [workspace]
 members = ["libs/scrap", "libs/hbb_common", "libs/base", "libs/enigo", "libs/clipboard", "libs/virtual_display", "libs/virtual_display/dylib", "libs/portable", "libs/remote_printer"]
-exclude = ["vdi/host"]
+exclude = ["vdi/host", "libs/rdev"]
 
 # Patch libxdo-sys to use a stub implementation that doesn't require libxdo
 # This allows building and running on systems without libxdo installed (e.g., Wayland-only)
@@ -257,6 +257,13 @@ tungstenite = { git = "https://github.com/rustdesk-org/tungstenite-rs", rev = "e
 webrtc = { git = "https://github.com/rustdesk-org/webrtc", rev = "49c89bd8d30e6e62e4c1a96cee38fdc11f79ef63" }
 webrtc-util = { git = "https://github.com/rustdesk-org/webrtc", rev = "49c89bd8d30e6e62e4c1a96cee38fdc11f79ef63" }
 webrtc-sctp = { git = "https://github.com/rustdesk-org/webrtc", rev = "49c89bd8d30e6e62e4c1a96cee38fdc11f79ef63" }
+
+# Iatoi rc (2026-11-20): rdev vendored at the locked rev 0904f23ce496e255461a98848b85c11fa5a62eab
+# (libs/rdev, excluded from the workspace so its dev-dependencies stay out of the lockfile), patched
+# on macOS so the keyboard grab can sit at the HID tap - ahead of Vietnamese input tools such as
+# OpenKey/EVKey that swallow keys at the session tap - and so a caller can see the event source.
+[patch."https://github.com/rustdesk-org/rdev"]
+rdev = { path = "libs/rdev" }
 
 [package.metadata.winres]
 LegalCopyright = "Copyright © 2026 Purslane Tech Pte. Ltd. All rights reserved."
