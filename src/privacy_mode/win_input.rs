@@ -2,9 +2,11 @@ use hbb_common::{allow_err, bail, lazy_static, log, ResultType};
 use std::{
     io::Error,
     sync::{
+        atomic::{AtomicU64, Ordering},
         mpsc::{channel, Sender},
         Mutex,
     },
+    time::Instant,
 };
 use winapi::{
     ctypes::c_int,
@@ -21,8 +23,19 @@ const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 4;
 
 const WM_USER_EXIT_HOOK: u32 = WM_USER + 1;
 
+use super::win_input_ime as ime;
+
 lazy_static::lazy_static! {
     static ref CUR_HOOK_THREAD_ID: Mutex<DWORD> = Mutex::new(0);
+    // iatoi-rc: moc thoi gian de do khoang cach tu phim tu xa gan nhat.
+    static ref MOC_THOI_GIAN: Instant = Instant::now();
+}
+
+// iatoi-rc: ms (tinh tu MOC_THOI_GIAN, +1) cua phim tu xa gan nhat; 0 = chua co.
+static PHIM_TU_XA_GAN_NHAT_MS: AtomicU64 = AtomicU64::new(0);
+
+fn bay_gio_ms() -> u64 {
+    (MOC_THOI_GIAN.elapsed().as_millis() as u64).saturating_add(1)
 }
 
 fn do_hook(tx: Sender<String>) -> ResultType<(HHOOK, HHOOK)> {
@@ -203,38 +216,67 @@ pub extern "system" fn privacy_mode_hook_keyboard(
     let w_param2 = w_param as UINT;
 
     unsafe {
-        if (*ks).dwExtraInfo != enigo::ENIGO_INPUT_EXTRA_VALUE {
-            // Disable alt key. Alt + Tab will switch windows.
-            if (*ks).flags & LLKHF_ALTDOWN == LLKHF_ALTDOWN {
+        let tu_enigo = (*ks).dwExtraInfo == enigo::ENIGO_INPUT_EXTRA_VALUE;
+        let bay_gio = bay_gio_ms();
+        if tu_enigo {
+            PHIM_TU_XA_GAN_NHAT_MS.store(bay_gio, Ordering::Relaxed);
+        } else {
+            // iatoi-rc: bo go (Unikey...) tu SendInput Backspace/Unicode sau phim tu xa.
+            // Cho qua phim injected trong IME_CUA_SO_MS sau phim tu xa (xem win_input_ime).
+            let injected = (*ks).flags & LLKHF_INJECTED == LLKHF_INJECTED;
+            let alt_down = (*ks).flags & LLKHF_ALTDOWN == LLKHF_ALTDOWN;
+            let gan_nhat = PHIM_TU_XA_GAN_NHAT_MS.load(Ordering::Relaxed);
+            let cho_phep_ime = injected
+                && !alt_down
+                && ime::tuy_chon_ime_bat(&hbb_common::config::Config::get_option(
+                    ime::TUY_CHON_PRIVACY_ALLOW_IME,
+                ));
+            let phim = ime::PhimVao {
+                tu_enigo,
+                alt_down,
+                injected,
+                keydown: w_param2 == WM_KEYDOWN,
+                vk_code: (*ks).vkCode,
+                ms_tu_phim_tu_xa: if gan_nhat == 0 {
+                    None
+                } else {
+                    Some(bay_gio.saturating_sub(gan_nhat))
+                },
+                cho_phep_ime,
+            };
+            // Disable alt key (Alt + Tab will switch windows) and all keys other than
+            // P and Ctrl, except IME keys allowed above.
+            if !ime::nen_cho_qua(&phim) {
                 return 1;
             }
 
             match w_param2 {
                 WM_KEYDOWN => {
-                    // Disable all keys other than P and Ctrl.
-                    if ![80, 162, 163].contains(&(*ks).vkCode) {
-                        return 1;
-                    }
+                    if ime::PHIM_CHO_QUA_GOC.contains(&(*ks).vkCode) {
+                        // NOTE: GetKeyboardState may not work well...
 
-                    // NOTE: GetKeyboardState may not work well...
-
-                    // Check if Ctrl + P is pressed
-                    let cltr_down = (GetKeyState(VK_CONTROL) as u16) & (0x8000 as u16) > 0;
-                    let key = LOBYTE((*ks).vkCode as _);
-                    if cltr_down && (key == 'p' as u8 || key == 'P' as u8) {
-                        // Ctrl + P is pressed, turn off privacy mode
-                        if let Some(Err(e)) = super::turn_off_privacy(
-                            super::INVALID_PRIVACY_MODE_CONN_ID,
-                            Some(super::PrivacyModeState::OffByPeer),
-                        ) {
-                            log::error!("Failed to off_privacy {}", e);
+                        // Check if Ctrl + P is pressed
+                        let cltr_down = (GetKeyState(VK_CONTROL) as u16) & (0x8000 as u16) > 0;
+                        let key = LOBYTE((*ks).vkCode as _);
+                        if cltr_down && (key == 'p' as u8 || key == 'P' as u8) {
+                            // Ctrl + P is pressed, turn off privacy mode
+                            if let Some(Err(e)) = super::turn_off_privacy(
+                                super::INVALID_PRIVACY_MODE_CONN_ID,
+                                Some(super::PrivacyModeState::OffByPeer),
+                            ) {
+                                log::error!("Failed to off_privacy {}", e);
+                            }
+                            // iatoi-rc: nguoi tai may thoat Privacy Mode bang Ctrl+P se chi thay
+                            // desktop. Neu bat lock-on-privacy-exit='Y' thi khoa may luon (ve man
+                            // hinh Lock Windows, muon vao phai co mat khau) -> dong lo hong Ctrl+P.
+                            if hbb_common::config::Config::get_option("lock-on-privacy-exit")
+                                == "Y"
+                            {
+                                crate::platform::lock_screen();
+                            }
                         }
-                        // iatoi-rc: nguoi tai may thoat Privacy Mode bang Ctrl+P se chi thay
-                        // desktop. Neu bat lock-on-privacy-exit='Y' thi khoa may luon (ve man
-                        // hinh Lock Windows, muon vao phai co mat khau) -> dong lo hong Ctrl+P.
-                        if hbb_common::config::Config::get_option("lock-on-privacy-exit") == "Y" {
-                            crate::platform::lock_screen();
-                        }
+                    } else {
+                        log::trace!("IME key allowed {}", (*ks).vkCode);
                     }
                 }
                 WM_KEYUP => {

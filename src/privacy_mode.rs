@@ -18,6 +18,9 @@ use std::{
 pub mod win_exclude_from_capture;
 #[cfg(windows)]
 mod win_input;
+// iatoi-rc: logic thuan cho/chan phim bo go trong Privacy Mode 1 (test duoc moi nen).
+#[cfg(any(windows, test))]
+mod win_input_ime;
 #[cfg(windows)]
 pub mod win_mag;
 #[cfg(windows)]

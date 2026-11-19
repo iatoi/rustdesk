@@ -78,3 +78,11 @@ revision. The submodule `libs/hbb_common` is untouched.
 
 ## lock-on-privacy-exit (2026-11-19)
 `src/privacy_mode/win_input.rs`: khi người tại máy bấm **Ctrl+P** để thoát Privacy Mode (Mode 1 Blackout), nếu `Config::get_option("lock-on-privacy-exit") == "Y"` thì gọi `crate::platform::lock_screen()` (LockWorkStation) ngay sau `turn_off_privacy` → máy về màn hình Lock Windows, muốn vào phải có mật khẩu. Đóng lỗ hổng "Ctrl+P lộ desktop" của Privacy Mode gốc. Cờ opt-in, mặc định tắt. Script `day-iatoi-rc-qua-ssh.py` đặt `'Y'` cho chế độ `may-rieng`, `'N'` cho `nguoi-dung`.
+
+## privacy-allow-ime (2026-11-20)
+`src/privacy_mode/win_input.rs` + module thuần mới `src/privacy_mode/win_input_ime.rs` (khai báo trong `src/privacy_mode.rs`): sửa lỗi gõ tiếng Việt (Unikey/Telex) từ xa khi Privacy Mode 1 (Blackout) bật — trước đây "phiên này chúng" ra "Phia a cha" vì hook bàn phím chặn mọi phím không mang `ENIGO_INPUT_EXTRA_VALUE`, kể cả Backspace/ký tự Unicode mà bộ gõ tự `SendInput` sau phím từ xa.
+
+- Hook ghi thời điểm phím từ xa (enigo) gần nhất. Phím không phải từ enigo được cho qua **chỉ khi** đồng thời: cờ `LLKHF_INJECTED` bật (phần mềm gửi, không phải bàn phím vật lý), cách phím từ xa gần nhất ≤ `IME_CUA_SO_MS` = 250 ms, và tuỳ chọn bật.
+- Tuỳ chọn `privacy-allow-ime` (`Config::get_option`): **mặc định bật**; chỉ giá trị `"N"` mới tắt (về hành vi gốc).
+- Không đổi: phím vật lý tại máy vẫn bị chặn; phím có Alt vẫn bị chặn; Ctrl+P thoát Privacy Mode và `lock-on-privacy-exit` giữ nguyên.
+- Đánh đổi an ninh: trong cửa sổ 250 ms sau mỗi phím từ xa, **bất kỳ phần mềm nào trên máy đích** gửi phím giả lập (SendInput) đều lọt qua hook (không chỉ bộ gõ). Phần mềm đã chạy trên máy đích vốn có nhiều cách khác để thao tác máy, nhưng ai cần chặn tuyệt đối thì đặt `privacy-allow-ime = 'N'` (khi đó gõ tiếng Việt bằng bộ gõ trên máy đích sẽ hỏng như cũ).
