@@ -78,3 +78,20 @@ revision. The submodule `libs/hbb_common` is untouched.
 
 ## lock-on-privacy-exit (2026-11-19)
 `src/privacy_mode/win_input.rs`: khi người tại máy bấm **Ctrl+P** để thoát Privacy Mode (Mode 1 Blackout), nếu `Config::get_option("lock-on-privacy-exit") == "Y"` thì gọi `crate::platform::lock_screen()` (LockWorkStation) ngay sau `turn_off_privacy` → máy về màn hình Lock Windows, muốn vào phải có mật khẩu. Đóng lỗ hổng "Ctrl+P lộ desktop" của Privacy Mode gốc. Cờ opt-in, mặc định tắt. Script `day-iatoi-rc-qua-ssh.py` đặt `'Y'` cho chế độ `may-rieng`, `'N'` cho `nguoi-dung`.
+
+## mac-ignore-synthetic-keys (2026-11-20)
+macOS controller with a Vietnamese input tool on (OpenKey/EVKey/GoTiengViet, Telex) typing into a
+Windows peer with Unikey: the tool's session event tap swallowed physical keys and posted
+Backspace + composed characters on keycode 0 from a private event source; the rdev grab
+(session tap) forwarded those to the peer as Backspace/"A". Local option
+`mac-ignore-synthetic-keys` (LocalConfig, on unless `'N'`, read once when the grab starts):
+- `libs/rdev/`: rdev vendored at the locked rev `0904f23ce496e255461a98848b85c11fa5a62eab` (MIT,
+  licence file kept), wired by `[patch."https://github.com/rustdesk-org/rdev"]` in `Cargo.toml`,
+  excluded from the workspace; `Cargo.lock` drops the git `source` of `rdev`. Patched only in
+  `src/macos/grab.rs` (+ re-exports in `src/macos/mod.rs`, `src/lib.rs`): `set_grab_at_hid(bool)`
+  puts the grab tap at `kCGHIDEventTap` (falls back to the session tap if refused, logged);
+  `last_event_source()` returns the current event's `kCGEventSourceStateID` / `UnixProcessID`.
+- `src/keyboard/mac_synthetic.rs` (new): `nen_gui_phim(on, source_state_id)` — while a session
+  holds the keyboard, a key whose source state is not HIDSystemState (1) is not sent to the peer.
+- `src/keyboard.rs`: reads the option, calls `rdev::set_grab_at_hid`, applies `nen_gui_phim`.
+Not covered: Input source 2 (Flutter key events) still sees what the input tool produced.

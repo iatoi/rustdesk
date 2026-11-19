@@ -373,6 +373,8 @@ pub use crate::macos::set_keyboard_extra_info;
 pub use crate::macos::set_mouse_extra_info;
 #[cfg(target_os = "macos")]
 pub use crate::macos::{exit_grab, grab as _grab, is_grabbed};
+#[cfg(target_os = "macos")]
+pub use crate::macos::{grab_is_at_hid, last_event_source, set_grab_at_hid};
 #[cfg(target_os = "windows")]
 pub use crate::windows::set_keyboard_extra_info;
 #[cfg(target_os = "windows")]
