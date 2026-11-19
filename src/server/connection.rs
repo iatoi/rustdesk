@@ -2231,6 +2231,10 @@ impl Connection {
         } else if sub_service {
             if !wait_session_id_confirm {
                 self.try_sub_monitor_services();
+                #[cfg(any(target_os = "windows", target_os = "macos"))]
+                if self.is_remote() && Config::get_option("auto-privacy-mode") == "Y" {
+                    self.turn_on_privacy(String::new()).await;
+                }
             }
         }
         true
@@ -5317,8 +5321,9 @@ impl Connection {
         // But it's not necessary now and we have to consider two audio services(client, server).
         crate::audio_service::set_voice_call_input_device(None, true);
         log::info!("#{} Connection closed: {}", self.inner.id(), reason);
+        let force_lock = Config::get_option("lock-on-disconnect") == "Y";
         if lock
-            && self.lock_after_session_end
+            && (self.lock_after_session_end || force_lock)
             && self.keyboard
             && !raii::AuthedConnID::session_reconnected(self.inner.id(), &self.session_key())
         {

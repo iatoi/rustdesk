@@ -9,8 +9,13 @@ use std::sync::{Arc, Mutex};
 #[cfg(windows)]
 use std::time::Duration;
 
+fn should_hide_tray() -> bool {
+    crate::ui_interface::get_builtin_option(keys::OPTION_HIDE_TRAY) == "Y"
+        || hbb_common::config::Config::get_option(keys::OPTION_HIDE_TRAY) == "Y"
+}
+
 pub fn start_tray() {
-    if crate::ui_interface::get_builtin_option(keys::OPTION_HIDE_TRAY) == "Y" {
+    if should_hide_tray() {
         #[cfg(not(target_os = "macos"))]
         {
             return;
@@ -148,7 +153,7 @@ fn make_tray() -> hbb_common::ResultType<()> {
         if let tao::event::Event::NewEvents(tao::event::StartCause::Init) = event {
             // for fixing https://github.com/rustdesk/rustdesk/discussions/10210#discussioncomment-14600745
             // so we start tray, but not to show it
-            if crate::ui_interface::get_builtin_option(keys::OPTION_HIDE_TRAY) == "Y" {
+            if should_hide_tray() {
                 return;
             }
             // We create the icon once the event loop is actually running

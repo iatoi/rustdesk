@@ -6,7 +6,24 @@ notices of the RustDesk authors and contributors are kept unchanged. This
 file lists the modifications, as the license requires.
 
 Iatoi rc is not RustDesk and is not affiliated with or endorsed by the
-RustDesk authors. Build target: Windows x64 only.
+RustDesk authors. Build targets: Windows x64 and macOS arm64.
+
+## Modifications (2026-11-19)
+
+4. Opt-in silent/privacy host options and descriptive privacy-mode labels
+   - `src/tray.rs`: `hide-tray = 'Y'` is also read from runtime config
+     (`Config::get_option("hide-tray") == "Y"`), allowing headless system-app
+     operation without a tray icon when explicitly enabled (off by default).
+   - `src/server/connection.rs`: two opt-in host-side config options (off by
+     default): `lock-on-disconnect = 'Y'` locks the screen when a remote
+     control session ends regardless of client toggle; `auto-privacy-mode = 'Y'`
+     activates the default privacy mode (Mode 1) once a remote desktop session
+     is authorized.
+   - `src/lang/en.rs`, `src/lang/vi.rs`: descriptive labels for Privacy Mode 1
+     (Blackout screen / phủ đen) and Mode 2 (Virtual display / màn hình ảo).
+   - `.github/workflows/flutter-build.yml`: re-enabled `build-for-macOS` for
+     Apple Silicon (`aarch64-apple-darwin`), shipping `Iatoi-rc.app` inside
+     `iatoi-rc-<version>-aarch64.dmg`.
 
 ## Modifications (2026-11-18)
 
