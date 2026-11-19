@@ -86,3 +86,20 @@ revision. The submodule `libs/hbb_common` is untouched.
 - Tuỳ chọn `privacy-allow-ime` (`Config::get_option`): **mặc định bật**; chỉ giá trị `"N"` mới tắt (về hành vi gốc).
 - Không đổi: phím vật lý tại máy vẫn bị chặn; phím có Alt vẫn bị chặn; Ctrl+P thoát Privacy Mode và `lock-on-privacy-exit` giữ nguyên.
 - Đánh đổi an ninh: trong cửa sổ 250 ms sau mỗi phím từ xa, **bất kỳ phần mềm nào trên máy đích** gửi phím giả lập (SendInput) đều lọt qua hook (không chỉ bộ gõ). Phần mềm đã chạy trên máy đích vốn có nhiều cách khác để thao tác máy, nhưng ai cần chặn tuyệt đối thì đặt `privacy-allow-ime = 'N'` (khi đó gõ tiếng Việt bằng bộ gõ trên máy đích sẽ hỏng như cũ).
+
+## mac-ignore-synthetic-keys (2026-11-20)
+macOS controller with a Vietnamese input tool on (OpenKey/EVKey/GoTiengViet, Telex) typing into a
+Windows peer with Unikey: the tool's session event tap swallowed physical keys and posted
+Backspace + composed characters on keycode 0 from a private event source; the rdev grab
+(session tap) forwarded those to the peer as Backspace/"A". Local option
+`mac-ignore-synthetic-keys` (LocalConfig, on unless `'N'`, read once when the grab starts):
+- `libs/rdev/`: rdev vendored at the locked rev `0904f23ce496e255461a98848b85c11fa5a62eab` (MIT,
+  licence file kept), wired by `[patch."https://github.com/rustdesk-org/rdev"]` in `Cargo.toml`,
+  excluded from the workspace; `Cargo.lock` drops the git `source` of `rdev`. Patched only in
+  `src/macos/grab.rs` (+ re-exports in `src/macos/mod.rs`, `src/lib.rs`): `set_grab_at_hid(bool)`
+  puts the grab tap at `kCGHIDEventTap` (falls back to the session tap if refused, logged);
+  `last_event_source()` returns the current event's `kCGEventSourceStateID` / `UnixProcessID`.
+- `src/keyboard/mac_synthetic.rs` (new): `nen_gui_phim(on, source_state_id)` — while a session
+  holds the keyboard, a key whose source state is not HIDSystemState (1) is not sent to the peer.
+- `src/keyboard.rs`: reads the option, calls `rdev::set_grab_at_hid`, applies `nen_gui_phim`.
+Not covered: Input source 2 (Flutter key events) still sees what the input tool produced.

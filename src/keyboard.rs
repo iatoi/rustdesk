@@ -81,6 +81,7 @@ lazy_static::lazy_static! {
 }
 
 pub mod shortcuts;
+pub mod mac_synthetic;
 
 pub mod client {
     use super::*;
@@ -665,12 +666,32 @@ fn should_block_relative_mouse_shortcut(key: Key, is_press: bool) -> bool {
 
 fn start_grab_loop() {
     std::env::set_var("KEYBOARD_ONLY", "y");
+    #[cfg(target_os = "macos")]
+    let ignore_synthetic_keys = mac_synthetic::option_bat(&hbb_common::config::LocalConfig::get_option(
+        mac_synthetic::OPTION_MAC_IGNORE_SYNTHETIC_KEYS,
+    ));
     #[cfg(any(target_os = "windows", target_os = "macos"))]
     std::thread::spawn(move || {
         let try_handle_keyboard = move |event: Event, key: Key, is_press: bool| -> Option<Event> {
             // fix #2211：CAPS LOCK don't work
             if key == Key::CapsLock || key == Key::NumLock {
                 return Some(event);
+            }
+
+            // Iatoi rc: keys posted by another process (OpenKey/EVKey...) are not the user's
+            // keystrokes; let them through locally, never send them to the peer.
+            #[cfg(target_os = "macos")]
+            if KEYBOARD_HOOKED.load(Ordering::SeqCst) {
+                let (source_state_id, source_pid) = rdev::last_event_source();
+                if !mac_synthetic::nen_gui_phim(ignore_synthetic_keys, source_state_id) {
+                    log::debug!(
+                        "skip synthetic key {:?} (source state {}, pid {})",
+                        key,
+                        source_state_id,
+                        source_pid
+                    );
+                    return Some(event);
+                }
             }
 
             let _scan_code = event.position_code;
@@ -730,6 +751,8 @@ fn start_grab_loop() {
         };
         #[cfg(target_os = "macos")]
         rdev::set_is_main_thread(false);
+        #[cfg(target_os = "macos")]
+        rdev::set_grab_at_hid(ignore_synthetic_keys);
         #[cfg(target_os = "windows")]
         rdev::set_event_popup(false);
         if let Err(error) = rdev::grab(func) {
